@@ -15,17 +15,6 @@ local function safeGetPlayer(src)
     return player
 end
 
--- Health check / ping to confirm server script loaded
-RegisterCommand('gsr_ping', function(source)
-    if source ~= 0 then
-        TriggerClientEvent('chat:addMessage', source, {
-            color = {0, 255, 100},
-            multiline = false,
-            args = {'SmallResources', 'Server script is loaded and responding.'}
-        })
-    end
-end, true)
-
 -- Notify on resource start/stop for visibility and dependency hints
 AddEventHandler('onResourceStart', function(res)
     if res == resourceName then

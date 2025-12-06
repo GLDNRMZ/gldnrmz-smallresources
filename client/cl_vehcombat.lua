@@ -14,11 +14,15 @@ local config = {
     neutralRelationship = 1,   -- Relationship level to reset to when players exit vehicle
 }
 
-local ped = PlayerPedId()
+-- Helper to always get current player ped (works across respawns)
+local function playerPed()
+    return (cache and cache.ped) or PlayerPedId()
+end
 
 -- Set hostile relationships between all players
 local function setRelationships()
     -- Setting hostile relationships
+    local ped = playerPed()
     for _, playerId in ipairs(GetActivePlayers()) do
         local otherPed = GetPlayerPed(playerId)
         if otherPed ~= ped then
@@ -43,6 +47,7 @@ end
 -- If we don't reset these, then players will always try to drag/smack the driver out
 local function resetRelationships()
     -- Resetting relationships to neutral
+    local ped = playerPed()
     for _, playerId in ipairs(GetActivePlayers()) do
         local otherPed = GetPlayerPed(playerId)
         if otherPed ~= ped then
@@ -63,6 +68,7 @@ end
 -- Get all current occupants of the vehicle the player is in
 ---@return table -- A table of player IDs currently in the vehicle
 local function getVehOccupants()
+    local ped = playerPed()
     local currentVehicle = GetVehiclePedIsIn(ped, false)
 
     if not currentVehicle or currentVehicle == 0 then
@@ -107,42 +113,59 @@ end
 -- I wish there was a better way to do this...
 -- I tried using ox_lib's onCache for vehicle,
 -- but it only triggers for the individual client, not when others enter their vehicle
-CreateThread(function()
+local function startVehCombatMonitor()
     local lastOccupants = {}
     local inVehicle = false
 
-    while true do
-        local currentVehicle = GetVehiclePedIsIn(ped, false)
-        local currentlyInVehicle = currentVehicle and currentVehicle ~= 0
+    CreateThread(function()
+        while true do
+            local ped = playerPed()
+            local currentVehicle = GetVehiclePedIsIn(ped, false)
+            local currentlyInVehicle = currentVehicle and currentVehicle ~= 0
 
-        if currentlyInVehicle then
-            if not inVehicle then
-                -- Entered vehicle
-                inVehicle = true
-            end
+            if currentlyInVehicle then
+                if not inVehicle then
+                    -- Entered vehicle
+                    inVehicle = true
+                end
 
-            local currentOccupants = getVehOccupants()
+                local currentOccupants = getVehOccupants()
 
-            if occupantsChanged(currentOccupants, lastOccupants) then
-                -- occupants changed, update relationships
-                setRelationships()
-                lastOccupants = currentOccupants
-            end
+                if occupantsChanged(currentOccupants, lastOccupants) then
+                    -- occupants changed, update relationships
+                    setRelationships()
+                    lastOccupants = currentOccupants
+                end
 
-            Wait(config.updateInterval)
-        else
-            -- Exited vehicle
-            if inVehicle then
+                Wait(config.updateInterval)
+            else
                 -- Exited vehicle
-                resetRelationships()
-                inVehicle = false
-                lastOccupants = {}
-            end
+                if inVehicle then
+                    -- Exited vehicle
+                    resetRelationships()
+                    inVehicle = false
+                    lastOccupants = {}
+                end
 
-            Wait(1000)
+                Wait(1000)
+            end
         end
-    end
-end)
+    end)
+end
+
+-- Ensure we only start after player is loaded/spawned; start once
+local monitorStarted = false
+local function startOnce()
+    if monitorStarted then return end
+    monitorStarted = true
+    startVehCombatMonitor()
+end
+
+AddEventHandler('QBCore:Client:OnPlayerLoaded', startOnce)
+AddEventHandler('playerSpawned', startOnce)
+if NetworkIsPlayerActive(PlayerId()) then
+    startOnce()
+end
 
 -- Cleanup: Reset relationships
 AddEventHandler('onResourceStop', function(resourceName)
