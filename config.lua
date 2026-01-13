@@ -21,7 +21,7 @@ Config.features = {
     wStart = false,            -- Press W to start car engine (driver seat only)
     propStuck = true,          -- Enable /propstuck command to clear attached props
     jumpSpam = true,           -- Ragdoll players to discourage jump spamming
-    disablePunch = true,       -- Disable punch controls to prevent spam punching
+    disablePunch = false,       -- Disable punch controls to prevent spam punching
 
     -- Server-side features (per-file)
     saveArmor = true,          -- Save/restore player armor on unload/load
