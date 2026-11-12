@@ -1,35 +1,21 @@
--- Disable Punch Controls
--- Disables melee inputs to prevent spam punching, allowing punches only when targetting
+-- Blocks melee attacks unless the player is locked on to a target
 
-if not (Config and Config.features and Config.features.disablePunch) then return end
+if not Utils.enabled('disablePunch') then return end
 
-local function startMonitor()
-    while not NetworkIsPlayerActive(PlayerId()) do
-        Wait(250)
-    end
+local MELEE_LIGHT, MELEE_HEAVY, MELEE_ALTERNATE = 140, 141, 142
 
-    CreateThread(function()
-        while true do
-            local ped = PlayerPedId()
-            if ped ~= 0 then
-                -- Only affect on-foot players to avoid interfering with vehicles/other states
-                if IsPedOnFoot(ped) and not IsEntityDead(ped) then
-                    -- Disable light melee
-                    DisableControlAction(0, 140, true)
-                    -- Disable heavy and alternate melee when not targetting
-                    if not IsPlayerTargettingAnything(PlayerId()) then
-                        DisableControlAction(0, 141, true)
-                        DisableControlAction(0, 142, true)
-                    end
-                end
+CreateThread(function()
+    while true do
+        local ped = cache.ped
+        if IsPedOnFoot(ped) and not IsEntityDead(ped) then
+            DisableControlAction(0, MELEE_LIGHT, true)
+            if not IsPlayerTargettingAnything(cache.playerId) then
+                DisableControlAction(0, MELEE_HEAVY, true)
+                DisableControlAction(0, MELEE_ALTERNATE, true)
             end
             Wait(0)
+        else
+            Wait(500)
         end
-    end)
-end
-
-AddEventHandler('QBCore:Client:OnPlayerLoaded', startMonitor)
-AddEventHandler('playerSpawned', startMonitor)
-if NetworkIsPlayerActive(PlayerId()) then
-    startMonitor()
-end
+    end
+end)

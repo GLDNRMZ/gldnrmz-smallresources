@@ -1,17 +1,35 @@
-if not (Config and Config.features and Config.features.noRoll) then return end
+-- Ragdolls players who combat roll while holding a weapon
 
-local function checkCombatRoll()
+if not Utils.enabled('noRoll') then return end
+
+local COMBAT_ROLL_TASK = 3
+local ragdollTime = Config.noRoll.ragdollTime
+
+local armed, watching = false, false
+
+local function watch()
+    if watching then return end
+    watching = true
+
     CreateThread(function()
-        while cache.weapon do    
-            if GetIsTaskActive(cache.ped, 3) then
-                SetPedToRagdoll(cache.ped, 3000, 3000, 0, 0, 0, 0)
-            end         
+        while armed do
+            local ped = cache.ped
+            if GetIsTaskActive(ped, COMBAT_ROLL_TASK) and not IsPedRagdoll(ped) then
+                SetPedToRagdoll(ped, ragdollTime, ragdollTime, 0, false, false, false)
+            end
             Wait(100)
         end
+        watching = false
     end)
 end
 
-lib.onCache('weapon', function(val)
-    if not val then return end
-    checkCombatRoll()
+-- onCache fires before cache.weapon updates, so track the value ourselves
+lib.onCache('weapon', function(weapon)
+    armed = weapon ~= nil and weapon ~= false
+    if armed then watch() end
 end)
+
+if cache.weapon then
+    armed = true
+    watch()
+end

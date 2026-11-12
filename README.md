@@ -1,89 +1,63 @@
-gldnrmz-smallresources
+# gldnrmz-smallresources
 
-A collection of small, toggleable gameplay and utility scripts for FiveM/QBCore-based servers. Every feature is gated behind a config toggle, so the resource can be safely restarted or tailored to your preferences without impacting other systems.
+A set of small gameplay tweaks for Qbox servers. Each feature has its own on/off switch in `config.lua`, and features that are switched off don't run any code.
 
-Dependencies
-- qb-core: Required for some server-side features (player info export/callback, player data access).
-- qbx_core: Used to save/restore player armor metadata in sv_savearmor.lua.
-- ox_lib: Recommended/optional. Powers the /info context menu and server callbacks.
-- ox_inventory: Recommended/optional. Powers the server-side weapon drop logic.
+## Requirements
 
-Installation
-1) Place this resource into your resources folder:
-   [scripts]/[gldnrmz]/gldnrmz-smallresources
-2) Ensure it in your server.cfg after qb-core/qbx_core and ox_lib:
-   ensure qb-core
-   ensure qbx_core
-   ensure ox_lib
-   ensure ox_inventory
-   ensure gldnrmz-smallresources
-3) Configure features and commands in config.lua. Restart the resource after changes.
+- [qbx_core](https://github.com/Qbox-project/qbx_core)
+- [ox_lib](https://github.com/overextended/ox_lib)
+- [ox_inventory](https://github.com/overextended/ox_inventory) (only for `weaponDrop`)
 
-Configuration (config.lua)
-Features (client)
-- playerInfo: Player info context menu (ox_lib)
-- autowalk: Allow players to wander like an AI ped
-- vehicleCombat: Allow shooting other players in the same vehicle
-- noHelmet: Prevent auto-helmet when on motorcycle
-- noVehWeapons: Disable vehicle-mounted weapons
-- pauseMap: Play tourist map animation when pause menu is active
-- look: Look at closest talking player
-- leap: Enable leap keybind (R)
-- trafficLights: Freeze traffic/street light props
-- noRoll: Prevent combat roll (ragdoll if detected)
-- weaponDropClient: Drop current weapon on death (client-side event bridge)
-- wStart: Press W to start car engine (driver seat only)
-- propStuck: Enable client command to clear props attached to your ped
-- jumpSpam: Ragdoll on repeated jump spam to discourage bunnyhopping
-- disablePunch: Disable melee punch controls to prevent spam punching
+## Installation
 
-Features (server)
-- saveArmor: Save armor on unload and restore on load via qbx_core metadata
-- weaponDropServer: Handle weapon drop creation using ox_inventory
+1. Put the folder in your resources, e.g. `[scripts]/[gldnrmz]/gldnrmz-smallresources`.
+2. Make sure it starts after `ox_lib` and `qbx_core` (and `ox_inventory` if you use `weaponDrop`).
+3. Edit `config.lua`, then restart the resource.
 
-Commands (config)
-- Commands are defined under `Config.commands` with `enabled` and `command` fields. Change names or disable per-command.
-  - `playerInfo`: `{ enabled = true, command = 'info' }`
-  - `autoWalk`: `{ enabled = true, command = 'autowalk' }`
-  - `propStuck`: `{ enabled = true, command = 'propfix' }`
+## Features
 
-Usage
-- Commands (examples; actual names read from `Config.commands`)
-  - `/info`: Shows player info (requires `ox_lib` and `Config.features.playerInfo = true`)
-  - `/autowalk`: Toggles AI-style wandering (requires `Config.features.autowalk = true`)
-  - `/propfix`: Clears props attached to your ped (requires `Config.features.propStuck = true`)
+| Toggle | Default | What it does |
+| --- | --- | --- |
+| `playerInfo` | on | `/info` shows your server ID, citizen ID, name, job and gang. Click an entry to copy it. |
+| `autowalk` | on | `/autowalk` makes you wander like an AI ped. Moving, sprinting, jumping, aiming or getting hurt cancels it. |
+| `vehicleCombat` | on | Lets players in the same vehicle shoot each other. |
+| `noHelmet` | on | Stops the automatic motorcycle helmet. `qbx_smallresources` has the same feature, so you only need one of them. |
+| `noVehWeapons` | on | Disables vehicle-mounted weapons. |
+| `pauseMap` | on | Plays a map-reading animation while the pause menu is open. |
+| `look` | on | Your head turns toward the closest player who is talking. |
+| `leap` | on | Hold Sprint and press **G** to dive. Players can rebind it under Settings > Key Bindings > FiveM. |
+| `trafficLights` | off | Traffic light props become frozen and unbreakable. |
+| `noRoll` | off | Players who combat roll while armed are ragdolled. |
+| `weaponDrop` | off | Your equipped weapon drops on the ground when you die. |
+| `wStart` | off | Press W in the driver seat to start the engine. |
+| `propStuck` | on | `/propfix` removes props stuck to your character. |
+| `jumpSpam` | on | 25% chance to ragdoll when jumping while running. |
+| `disablePunch` | off | Blocks melee unless you are locked on to a target. |
+| `firstPerson` | on | Forces first person while aiming in vehicles and on bikes (on-foot and always-on are optional). Your view switches back when you stop aiming. |
 
-- Export (server)
-  - exports['gldnrmz-smallresources']:GetPlayerInfo(src)
-    Returns table: { name, cid, job, jobGrade, gang, gangGrade } when qb-core is available and playerInfo=true
+Command names can be changed or disabled under `Config.commands`. Each feature's settings (chances, timings, keys, models) are further down in `config.lua`.
 
-- Callback (server via ox_lib)
-  - lib.callback.register('gldnrmz:server:getPlayerInfo', function(source) ... end)
-    Access via client lib.callback('gldnrmz:server:getPlayerInfo', ...)
+### Notes
 
-- Keybinds
-  - Leap: Press R to perform a leap (requires `Config.features.leap = true`)
-  - W Start: Press W to start the engine if you are in the driver seat (requires `Config.features.wStart = true`)
+- **wStart and vehicle keys:** by default, W starts any engine the player is driving. To require keys, put your keys check in `Config.wStart.canStart`.
+- **weaponDrop:** the server only accepts weapon items and has a cooldown (`Config.weaponDrop.cooldown`), so a modified client can't use the event to drop other items or spam drops.
+- **Armor:** qbx_core already saves and restores armor, so this resource no longer does it.
 
-Notes
-- All features are protected by config toggles; setting a toggle to false will safely disable its script.
-- Command registration and names are controlled separately by `Config.commands`.
-- Player info features require both qb-core (for player data) and ox_lib (for context UI and callbacks).
-- Armor persistence requires qbx_core and uses its metadata storage.
-- Weapon drop server logic requires ox_inventory.
- - `jumpSpam` and `disablePunch` are mutually exclusive in effect; if punches are disabled, punch spam detection will not trigger.
+## Changelog
 
-Troubleshooting
-- If /info does nothing, verify ox_lib is started and playerInfo=true.
-- If server export/callback returns nil, ensure qb-core is started and playerInfo=true.
-- If armor is not restored, verify qbx_core is started and saveArmor=true.
-- If weapon drops are not created, ensure ox_inventory is started and weaponDropServer=true.
-
-Files & Structure
-- client/*: Client-side features (guarded by `Config.features` and some with commands in `Config.commands`)
-- server/*: Server-side features and exports/callbacks (guarded by Config.features)
-- config.lua: Centralized feature toggles and settings
-- fxmanifest.lua: Manifest includes shared config and ox_lib init
-
-License
-- MIT or your preferred license. Replace this section if you need a specific license.
+### 2.0.0
+- Requires Qbox: player data now comes from qbx_core (removed the `qb-core` bridge and broken locale include).
+- Removed the armor saver. qbx_core already saves and restores armor, and the old unload handler saved for the wrong player.
+- Weapon drop: now one toggle (`weaponDrop`) that covers both client and server. The server event is renamed and validated: weapons only, rate-limited, and no crash on an empty slot. It also drops only once per death.
+- Fixed `disablePunch` starting duplicate per-frame loops on every spawn.
+- Fixed `noRoll` starting an extra loop on every weapon switch.
+- Fixed `look` resetting your head whenever any nearby player was silent, and now looks at the closest talker.
+- Fixed `/autowalk` usually ignoring the keys meant to cancel it.
+- `noVehWeapons` and `wStart` no longer run every frame. They only run while you're in an armed vehicle or in the driver seat.
+- `pauseMap` only stops its own animation instead of clearing all tasks (which broke emotes), and removes its prop when the resource stops.
+- `vehicleCombat` restores the exact original relationships instead of guessing, and only targets players in your vehicle.
+- `noHelmet` uses the ped config flag and no longer errors when you leave a vehicle.
+- `leap` has a cooldown and won't trigger while dead, cuffed, falling, swimming or ragdolled.
+- `/propfix` reports how many props it removed. `/info` adds your name and copy-on-click.
+- Commands now show chat suggestions. Tunable values were moved into `config.lua`, and global functions were removed.
+- Version check handles HTTP errors and compares versions properly.

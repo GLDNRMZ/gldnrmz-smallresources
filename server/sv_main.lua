@@ -1,74 +1,38 @@
--- gldnrmz-smallresources server side
--- Keep minimal and safe so the resource can restart without affecting the city
+if not Config.versionCheck then return end
 
-local resourceName = GetCurrentResourceName()
+local RESOURCE = GetCurrentResourceName()
+local VERSION_URL = ('https://raw.githubusercontent.com/GLDNRMZ/%s/main/version.txt'):format(RESOURCE)
 
-local function isResourceActive(name)
-    local state = GetResourceState(name)
-    return state == 'started' or state == 'starting'
+---@return integer[]
+local function parse(version)
+    local parts = {}
+    for n in version:gmatch('%d+') do parts[#parts + 1] = tonumber(n) end
+    return parts
 end
 
-local function safeGetPlayer(src)
-    if not isResourceActive('qb-core') then return nil end
-    local ok, player = pcall(function() return exports['qb-core']:GetPlayer(src) end)
-    if not ok then return nil end
-    return player
-end
-
--- Notify on resource start/stop for visibility and dependency hints
-AddEventHandler('onResourceStart', function(res)
-    if res == resourceName then
-        if not isResourceActive('qb-core') then
-            -- qb-core not active
-        end
-        if not isResourceActive('ox_lib') then
-            -- ox_lib not active
-        end
-        if Config and Config.features then
-            -- Features: playerInfo available via config; no console prints
-        end
+--- -1 if a < b, 0 if equal, 1 if a > b
+local function compare(a, b)
+    local pa, pb = parse(a), parse(b)
+    for i = 1, math.max(#pa, #pb) do
+        local x, y = pa[i] or 0, pb[i] or 0
+        if x ~= y then return x < y and -1 or 1 end
     end
+    return 0
+end
+
+CreateThread(function()
+    local current = GetResourceMetadata(RESOURCE, 'version', 0) or '0.0.0'
+
+    PerformHttpRequest(VERSION_URL, function(status, body)
+        if status ~= 200 or not body then
+            return print(('^3[GLDNRMZ] Could not check the version of %s (HTTP %s)^0'):format(RESOURCE, status))
+        end
+
+        local latest = body:gsub('%s', '')
+        if compare(current, latest) < 0 then
+            print(('^1[GLDNRMZ] %s is out of date! Latest: %s | Current: %s^0'):format(RESOURCE, latest, current))
+        else
+            print(('^2[GLDNRMZ] %s is up to date (%s)^0'):format(RESOURCE, current))
+        end
+    end, 'GET')
 end)
-
-AddEventHandler('onResourceStop', function(res)
-    if res == resourceName then
-        -- stopped (server)
-    end
-end)
-
--- Core info builder used by export and callback
-local function buildPlayerInfo(src)
-    local xPlayer = safeGetPlayer(src)
-    if not xPlayer then return nil end
-
-    local job = xPlayer.PlayerData.job or {}
-    local gang = xPlayer.PlayerData.gang or {}
-
-    return {
-        name = (xPlayer.PlayerData.charinfo and xPlayer.PlayerData.charinfo.firstname .. ' ' .. xPlayer.PlayerData.charinfo.lastname) or 'Unknown',
-        cid = xPlayer.PlayerData.citizenid,
-        job = job.label or job.name,
-        jobGrade = (job.grade and job.grade.name) or tostring(job.grade and job.grade.level),
-        gang = gang.label or gang.name,
-        gangGrade = (gang.grade and gang.grade.name) or tostring(gang.grade and gang.grade.level),
-    }
-end
-
--- Only register info features when enabled in config
-if Config and Config.features and Config.features.playerInfo then
-    -- Export so other resources can retrieve player info safely
-    exports('GetPlayerInfo', function(src)
-        return buildPlayerInfo(src)
-    end)
-
-    -- Server callback for client usage (guarded if ox_lib is missing)
-    if lib and lib.callback and lib.callback.register then
-        lib.callback.register('gldnrmz:server:getPlayerInfo', function(source)
-            return buildPlayerInfo(source)
-        end)
-    else
-        -- ox_lib callback API not available on server; skipping lib.callback.register
-    end
-else
-    -- playerInfo feature disabled in config; server export/callback not registered
-end

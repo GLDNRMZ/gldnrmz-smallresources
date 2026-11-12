@@ -1,20 +1,21 @@
--- Clear props stuck to the player's body via a client command
+-- /propfix: removes props stuck to your character and stops your current animation
 
--- Feature toggle: allow disabling this client script safely
-if not (Config and Config.features and Config.features.propStuck) then return end
+if not Utils.enabled('propStuck') then return end
 
-local function tryDeleteEntity(entity)
-    if not DoesEntityExist(entity) then return false end
+local CONTROL_TIMEOUT = 500 -- ms to wait for network control of each prop
 
-    -- Attempt to gain network control briefly
-    NetworkRequestControlOfEntity(entity)
-    local start = GetGameTimer()
-    while not NetworkHasControlOfEntity(entity) and (GetGameTimer() - start) < 500 do
-        Wait(0)
+---@param entity number
+---@return boolean deleted
+local function deleteEntity(entity)
+    if NetworkGetEntityIsNetworked(entity) and not NetworkHasControlOfEntity(entity) then
+        local deadline = GetGameTimer() + CONTROL_TIMEOUT
         NetworkRequestControlOfEntity(entity)
+        while not NetworkHasControlOfEntity(entity) and GetGameTimer() < deadline do
+            Wait(0)
+            NetworkRequestControlOfEntity(entity)
+        end
     end
 
-    -- Detach and delete
     DetachEntity(entity, true, true)
     SetEntityAsMissionEntity(entity, true, true)
     DeleteEntity(entity)
@@ -22,31 +23,51 @@ local function tryDeleteEntity(entity)
     return not DoesEntityExist(entity)
 end
 
-local function clearAttachedPropsForPed(ped)
-    local removed = 0
-    for _, obj in ipairs(GetGamePool('CObject')) do
+---@param ped number
+---@return integer removed, integer failed
+local function clearAttachedProps(ped)
+    local removed, failed = 0, 0
+    local objects = GetGamePool('CObject')
+
+    for i = 1, #objects do
+        local obj = objects[i]
         if DoesEntityExist(obj) and IsEntityAttachedToEntity(obj, ped) then
-            if tryDeleteEntity(obj) then
-                removed = removed + 1
+            if deleteEntity(obj) then
+                removed += 1
+            else
+                failed += 1
             end
         end
     end
-    return removed
+
+    return removed, failed
 end
 
--- /propfix: clears props attached to your ped and stops current animations
-local cmdPropFixName = (Config and Config.commands and Config.commands.propStuck and Config.commands.propStuck.command) or 'propfix'
-local cmdPropFixEnabled = not (Config and Config.commands and Config.commands.propStuck and Config.commands.propStuck.enabled == false)
+local running = false
 
-if cmdPropFixEnabled then
-RegisterCommand(cmdPropFixName, function()
-    local ped = PlayerPedId()
+Utils.registerCommand('propStuck', 'Remove props stuck to your character', function()
+    if running then return end
 
-    -- Stop animations and immediate tasks to avoid re-attaching props
+    local ped = cache.ped
+    if cache.vehicle then
+        return Utils.notify('You can\'t use this in a vehicle.', 'error', 'Prop Fix')
+    end
+    if Utils.isIncapacitated(ped) then
+        return Utils.notify('You can\'t use this right now.', 'error', 'Prop Fix')
+    end
+
+    running = true
     ClearPedSecondaryTask(ped)
-    ClearPedTasksImmediately(ped)
+    ClearPedTasks(ped)
 
-    local count = clearAttachedPropsForPed(ped)
+    local removed, failed = clearAttachedProps(ped)
+    running = false
 
-end, false)
-end
+    if removed == 0 and failed == 0 then
+        Utils.notify('Nothing was attached to you.', 'inform', 'Prop Fix')
+    elseif failed > 0 then
+        Utils.notify(('Removed %d prop(s), %d could not be removed.'):format(removed, failed), 'warning', 'Prop Fix')
+    else
+        Utils.notify(('Removed %d prop(s).'):format(removed), 'success', 'Prop Fix')
+    end
+end)

@@ -1,71 +1,53 @@
-if type(Config) == 'table' and Config.features and not Config.features.playerInfo then
-    return
-end
+-- /info: shows your server ID, citizen ID, job and gang. Click an entry to copy it.
 
-local QBCore = exports['qb-core']:GetCoreObject()
+if not Utils.enabled('playerInfo') then return end
 
-local function toStr(v)
-    return v ~= nil and tostring(v) or 'N/A'
-end
+local MENU_ID = 'gldnrmz_player_info'
 
-local function getInfo()
-    local pd = QBCore.Functions.GetPlayerData() or {}
-    local char = pd.charinfo or {}
-    local job = pd.job or {}
-    local gang = pd.gang or {}
-
-    local cid = pd.citizenid or char.citizenid
-    local serverId = GetPlayerServerId(PlayerId())
-
+local function option(title, value, icon)
+    value = (value ~= nil and value ~= '') and tostring(value) or 'N/A'
     return {
-        serverId = serverId,
-        citizenId = cid or 'Unknown',
-        jobLabel = job.label or job.name or 'Unemployed',
-        jobGrade = (job.grade and job.grade.name) or 'N/A',
-        onDuty = job.onduty and 'On Duty' or 'Off Duty',
-        gangLabel = gang.label or gang.name or 'None',
-        gangGrade = (gang.grade and gang.grade.name) or 'N/A',
+        title = title,
+        description = value,
+        icon = icon,
+        onSelect = function()
+            lib.setClipboard(value)
+            Utils.notify(('%s copied to clipboard'):format(title), 'success')
+        end,
     }
 end
 
-local function showInfoMenu()
-    local info = getInfo()
+local function showInfo()
+    local pd = QBX.PlayerData
+    if not pd or not pd.citizenid then
+        return Utils.notify('Your character isn\'t loaded yet.', 'error')
+    end
+
+    local char, job, gang = pd.charinfo or {}, pd.job or {}, pd.gang or {}
+    local name = char.firstname and ('%s %s'):format(char.firstname, char.lastname or '') or nil
+
+    local jobText = ('%s | %s | %s'):format(
+        job.label or job.name or 'Unemployed',
+        job.grade and job.grade.name or 'N/A',
+        job.onduty and 'On Duty' or 'Off Duty'
+    )
+    local gangText = ('%s | %s'):format(
+        gang.label or gang.name or 'None',
+        gang.grade and gang.grade.name or 'N/A'
+    )
 
     lib.registerContext({
-        id = 'qbx_player_info',
+        id = MENU_ID,
         title = 'Player Info',
         options = {
-            {
-                title = 'Server ID',
-                description = toStr(info.serverId),
-                icon = 'id-card'
-            },
-            {
-                title = 'Citizen ID',
-                description = info.citizenId,
-                icon = 'id-card'
-            },
-            {
-                title = 'Job',
-                description = ('%s | %s | %s'):format(info.jobLabel, info.jobGrade, info.onDuty),
-                icon = 'briefcase'
-            },
-            {
-                title = 'Gang',
-                description = ('%s | %s'):format(info.gangLabel, info.gangGrade),
-                icon = 'users'
-            }
-        }
+            option('Server ID', cache.serverId, 'hashtag'),
+            option('Citizen ID', pd.citizenid, 'id-card'),
+            option('Name', name, 'user'),
+            option('Job', jobText, 'briefcase'),
+            option('Gang', gangText, 'users'),
+        },
     })
-
-    lib.showContext('qbx_player_info')
+    lib.showContext(MENU_ID)
 end
 
-local cmdInfoName = (Config and Config.commands and Config.commands.playerInfo and Config.commands.playerInfo.command) or 'info'
-local cmdInfoEnabled = not (Config and Config.commands and Config.commands.playerInfo and Config.commands.playerInfo.enabled == false)
-
-if cmdInfoEnabled then
-RegisterCommand(cmdInfoName, function()
-    showInfoMenu()
-end, false)
-end
+Utils.registerCommand('playerInfo', 'Show your player info', showInfo)

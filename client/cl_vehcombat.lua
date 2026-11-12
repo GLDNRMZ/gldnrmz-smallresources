@@ -1,175 +1,67 @@
--- Allows players to shoot each other while in the same vehicle by manipulating relationship groups
+-- Lets players shoot each other while sharing a vehicle.
+-- GTA blocks this between "friendly" relationship groups, so while you're in a vehicle the
+-- relationship between your group and the other occupants' groups is set to hostile.
+-- The original values are restored when you get out.
 
--- Feature toggle: allow disabling this client script safely
-if type(Config) == 'table' and Config.features and not Config.features.vehicleCombat then
-    return
+if not Utils.enabled('vehicleCombat') then return end
+
+local HOSTILE = 255 -- tested value that allows same-vehicle shooting
+local interval = Config.vehicleCombat.interval
+
+---@type table<string, { a: number, b: number, original: number }>
+local changed = {}
+local currentVehicle
+
+local function makeHostile(a, b)
+    local key = a .. ':' .. b
+    if not changed[key] then
+        changed[key] = { a = a, b = b, original = GetRelationshipBetweenGroups(a, b) }
+    end
+    -- Re-applied every check in case another script reset it
+    SetRelationshipBetweenGroups(HOSTILE, a, b)
 end
 
--- Enabling shooting between players in the same vehicle (no console prints)
-
-local config = {
-    -- Internal defaults; these values are now handled purely in the client and not from config.lua
-    updateInterval = 500,      -- How often to check for occupant changes (ms)
-    hostileRelationship = 255, -- Relationship level to set when players share a vehicle
-    neutralRelationship = 1,   -- Relationship level to reset to when players exit vehicle
-}
-
--- Helper to always get current player ped (works across respawns)
-local function playerPed()
-    return (cache and cache.ped) or PlayerPedId()
+local function restoreAll()
+    for key, entry in pairs(changed) do
+        SetRelationshipBetweenGroups(entry.original, entry.a, entry.b)
+        changed[key] = nil
+    end
 end
 
--- Set hostile relationships between all players
-local function setRelationships()
-    -- Setting hostile relationships
-    local ped = playerPed()
-    for _, playerId in ipairs(GetActivePlayers()) do
-        local otherPed = GetPlayerPed(playerId)
-        if otherPed ~= ped then
-            -- THIS IS THE KEY!
-            -- From my tests, setting relationship group to 3+ allows shooting other players in the same vehicle
-            -- I'm using 255 (Pedestrians) which seems to work fine
-            SetRelationshipBetweenGroups(
-                config.hostileRelationship,
-                GetPedRelationshipGroupHash(ped),
-                GetPedRelationshipGroupHash(otherPed)
-            )
-            SetRelationshipBetweenGroups(
-            config.hostileRelationship,
-                GetPedRelationshipGroupHash(otherPed),
-                GetPedRelationshipGroupHash(ped)
-            )
+local function updateOccupants(vehicle)
+    local ped = cache.ped
+    local myGroup = GetPedRelationshipGroupHash(ped)
+
+    for seat = -1, GetVehicleMaxNumberOfPassengers(vehicle) - 1 do
+        local occupant = GetPedInVehicleSeat(vehicle, seat)
+        if occupant ~= 0 and occupant ~= ped and IsPedAPlayer(occupant) then
+            local theirGroup = GetPedRelationshipGroupHash(occupant)
+            makeHostile(myGroup, theirGroup)
+            makeHostile(theirGroup, myGroup)
         end
     end
 end
 
--- Reset relationships to neutral
--- If we don't reset these, then players will always try to drag/smack the driver out
-local function resetRelationships()
-    -- Resetting relationships to neutral
-    local ped = playerPed()
-    for _, playerId in ipairs(GetActivePlayers()) do
-        local otherPed = GetPlayerPed(playerId)
-        if otherPed ~= ped then
-            SetRelationshipBetweenGroups(
-                config.neutralRelationship,
-                GetPedRelationshipGroupHash(ped),
-                GetPedRelationshipGroupHash(otherPed)
-            )
-            SetRelationshipBetweenGroups(
-                config.neutralRelationship,
-                GetPedRelationshipGroupHash(otherPed),
-                GetPedRelationshipGroupHash(ped)
-            )
-        end
+---@param vehicle number|false
+local function onVehicle(vehicle)
+    currentVehicle = vehicle
+    if not vehicle then
+        -- Restoring matters: hostile groups make players yank each other out when entering vehicles
+        restoreAll()
+        return
     end
-end
-
--- Get all current occupants of the vehicle the player is in
----@return table -- A table of player IDs currently in the vehicle
-local function getVehOccupants()
-    local ped = playerPed()
-    local currentVehicle = GetVehiclePedIsIn(ped, false)
-
-    if not currentVehicle or currentVehicle == 0 then
-        return {}
-    end
-
-    local currentOccupants = {}
-    for seat = -1, GetVehicleModelNumberOfSeats(GetEntityModel(currentVehicle)) - 2 do
-        local occupant = GetPedInVehicleSeat(currentVehicle, seat)
-        if occupant and occupant ~= 0 and IsEntityAPed(occupant) and IsPedAPlayer(occupant) then
-            local playerId = NetworkGetPlayerIndexFromPed(occupant)
-            if playerId and playerId ~= -1 then
-                currentOccupants[playerId] = true
-            end
-        end
-    end
-
-    return currentOccupants
-end
-
--- Helper function to compare occupant tables
----@return boolean -- Returns true if occupants have changed
-local function occupantsChanged(current, last)
-    local currentCount, lastCount = 0, 0
-    for _ in pairs(current) do currentCount = currentCount + 1 end
-    for _ in pairs(last) do lastCount = lastCount + 1 end
-
-    if currentCount ~= lastCount then
-        return true
-    end
-
-    for playerId in pairs(current) do
-        if not last[playerId] then
-            return true
-        end
-    end
-
-    return false
-end
-
--- Monitor vehicle entry/exit and occupant changes
--- I wish there was a better way to do this...
--- I tried using ox_lib's onCache for vehicle,
--- but it only triggers for the individual client, not when others enter their vehicle
-local function startVehCombatMonitor()
-    local lastOccupants = {}
-    local inVehicle = false
 
     CreateThread(function()
-        while true do
-            local ped = playerPed()
-            local currentVehicle = GetVehiclePedIsIn(ped, false)
-            local currentlyInVehicle = currentVehicle and currentVehicle ~= 0
-
-            if currentlyInVehicle then
-                if not inVehicle then
-                    -- Entered vehicle
-                    inVehicle = true
-                end
-
-                local currentOccupants = getVehOccupants()
-
-                if occupantsChanged(currentOccupants, lastOccupants) then
-                    -- occupants changed, update relationships
-                    setRelationships()
-                    lastOccupants = currentOccupants
-                end
-
-                Wait(config.updateInterval)
-            else
-                -- Exited vehicle
-                if inVehicle then
-                    -- Exited vehicle
-                    resetRelationships()
-                    inVehicle = false
-                    lastOccupants = {}
-                end
-
-                Wait(1000)
-            end
+        while currentVehicle == vehicle and DoesEntityExist(vehicle) do
+            updateOccupants(vehicle)
+            Wait(interval)
         end
     end)
 end
 
--- Ensure we only start after player is loaded/spawned; start once
-local monitorStarted = false
-local function startOnce()
-    if monitorStarted then return end
-    monitorStarted = true
-    startVehCombatMonitor()
-end
+lib.onCache('vehicle', onVehicle)
+if cache.vehicle then onVehicle(cache.vehicle) end
 
-AddEventHandler('QBCore:Client:OnPlayerLoaded', startOnce)
-AddEventHandler('playerSpawned', startOnce)
-if NetworkIsPlayerActive(PlayerId()) then
-    startOnce()
-end
-
--- Cleanup: Reset relationships
-AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName == GetCurrentResourceName() then
-        resetRelationships()
-    end
+AddEventHandler('onResourceStop', function(resource)
+    if resource == cache.resource then restoreAll() end
 end)

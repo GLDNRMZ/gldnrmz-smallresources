@@ -1,11 +1,17 @@
-if type(Config) == 'table' and Config.features and not Config.features.noHelmet then
-    return
+-- Stops your character from putting on a helmet automatically when riding a motorcycle
+
+if not Utils.enabled('noHelmet') then return end
+
+local PUT_ON_MOTORCYCLE_HELMET = 35
+
+---@param ped number
+local function apply(ped)
+    if not ped or ped == 0 then return end
+    SetPedConfigFlag(ped, PUT_ON_MOTORCYCLE_HELMET, false)
+    SetPedHelmet(ped, false)
 end
 
-lib.onCache('vehicle', function(value, oldValue)
-    local isMotorcycle = GetVehicleClass(value) == 8
-    if not isMotorcycle then return end
+apply(cache.ped)
 
-    SetPedHelmet(cache.ped, false)
-    RemovePedHelmet(cache.ped, true)
-end)
+-- The flag lives on the ped, so re-apply when the ped is replaced (respawn, clothing/model change)
+lib.onCache('ped', apply)

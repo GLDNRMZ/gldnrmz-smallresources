@@ -1,67 +1,58 @@
-if type(Config) == 'table' and Config.features and not Config.features.look then
-    return
+-- Turns your head toward the closest nearby player who is talking
+
+if not Utils.enabled('look') then return end
+
+local maxDistance = Config.look.distance
+local lookingAt ---@type number? ped we are currently looking at
+
+local function clearLook()
+    if not lookingAt then return end
+    TaskClearLookAt(cache.ped)
+    lookingAt = nil
 end
 
--- config values
-local config = {
-    debug = true,
-    distance = 20 -- distance to check
-}
+---@return number? ped
+local function findClosestTalker(ped, coords)
+    if IsPedShooting(ped) or IsPlayerFreeAiming(cache.playerId) then return end
 
--- variables
-local lastTargetPlayer, lastDist = nil, 100
+    local players = lib.getNearbyPlayers(coords, maxDistance, false)
+    local bestPed, bestDist
 
-local function debugTxt(...)
-    if not config.debug then return end
+    for i = 1, #players do
+        local player = players[i]
+        if MumbleIsPlayerTalking(player.id) then
+            local dist = #(coords - player.coords)
+            if not bestDist or dist < bestDist then
+                bestPed, bestDist = player.ped, dist
+            end
+        end
+    end
 
-    -- lib.print.info(...)
-end
-
-local function playerDist(ped1, ped2)
-    local coords1 = GetEntityCoords(ped1)
-    local coords2 = GetEntityCoords(ped2)
-    local dist = #(coords1 - coords2)
-
-    return dist
+    return bestPed
 end
 
 CreateThread(function()
-    local sleep = 1000
     while true do
-        local playerPed = cache.ped
-        local coords = GetEntityCoords(playerPed)
-        local nearbyPlayers = lib.getNearbyPlayers(coords, config.distance, false)
-        if not nearbyPlayers or not next(nearbyPlayers) then
-            sleep = 1000
-        else
-            sleep = 500
+        local ped = cache.ped
+        local target = findClosestTalker(ped, GetEntityCoords(ped))
 
-            for i = 1, #nearbyPlayers do
-                local targetPed = nearbyPlayers[i].ped
-                local targetPlayer = nearbyPlayers[i].id
-
-                if NetworkIsPlayerActive(targetPlayer) and MumbleIsPlayerTalking(targetPlayer) and not IsPedShooting(playerPed) then
-                    local dist = playerDist(playerPed, targetPed)
-
-                    if (dist < lastDist) and (targetPlayer ~= lastTargetPlayer) then
-                        TaskLookAtEntity(playerPed, targetPed, -1, 2048, 3)
-                        lastDist = dist
-                        lastTargetPlayer = targetPlayer
-
-                        debugTxt(('Looking at %s'):format(GetPlayerName(targetPlayer)))
-                    end
-                else
-                    if lastTargetPlayer then
-                        TaskClearLookAt(playerPed)
-                        lastDist = 100
-                        lastTargetPlayer = nil
-
-                        debugTxt('Reset Head')
-                    end
-                end
+        if target ~= lookingAt then
+            if target then
+                TaskLookAtEntity(ped, target, -1, 2048, 3)
+                lookingAt = target
+                Utils.debug('Looking at ped', target)
+            else
+                clearLook()
             end
         end
 
-        Wait(sleep)
+        Wait(lookingAt and 250 or 500)
     end
+end)
+
+-- A new ped (respawn, model change) starts without a look-at task
+lib.onCache('ped', function() lookingAt = nil end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource == cache.resource then clearLook() end
 end)

@@ -1,22 +1,29 @@
 fx_version 'cerulean'
 game 'gta5'
+lua54 'yes'
+use_experimental_fxv2_oal 'yes'
 
-description 'Small Resources'
+name 'gldnrmz-smallresources'
+description 'Collection of small, toggleable gameplay tweaks'
 author 'gldnrmz'
-version '1.0.0'
+version '2.0.0'
 
 shared_scripts {
-    '@qb-core/shared/locale.lua',
     '@ox_lib/init.lua',
-    'config.lua'
+    'config.lua',
 }
 
 client_scripts {
-    'client/**.lua'
+    '@qbx_core/modules/playerdata.lua',
+    'client/utils.lua',   -- must load before the feature files
+    'client/cl_*.lua',
 }
 
 server_scripts {
-    'server/**.lua'
+    'server/*.lua',
 }
 
-lua54 'yes'
+dependencies {
+    'ox_lib',
+    'qbx_core',
+}

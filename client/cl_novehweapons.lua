@@ -1,17 +1,25 @@
-if type(Config) == 'table' and Config.features and not Config.features.noVehWeapons then
-    return
+-- Disables vehicle-mounted weapons. Only runs while you're in a vehicle that has weapons.
+
+if not Utils.enabled('noVehWeapons') then return end
+
+local currentVehicle
+
+---@param vehicle number|false
+local function onVehicle(vehicle)
+    currentVehicle = vehicle
+    if not vehicle or not DoesVehicleHaveWeapons(vehicle) then return end
+
+    CreateThread(function()
+        while currentVehicle == vehicle do
+            local ped = cache.ped
+            local hasWeapon, weaponHash = GetCurrentPedVehicleWeapon(ped)
+            if hasWeapon and weaponHash ~= 0 then
+                DisableVehicleWeapon(true, weaponHash, vehicle, ped)
+            end
+            Wait(0)
+        end
+    end)
 end
 
-CreateThread(function()
-    while true do
-        Wait(0)
-        local ped = PlayerPedId()
-        local veh = GetVehiclePedIsIn(ped, false)
-        local retval, weaponHash = GetCurrentPedVehicleWeapon(ped)
-        if veh ~= 0 then
-            if weaponHash ~= 0 then
-                DisableVehicleWeapon(true, weaponHash, veh, ped)
-            end
-        end
-    end
-end)
+lib.onCache('vehicle', onVehicle)
+if cache.vehicle then onVehicle(cache.vehicle) end

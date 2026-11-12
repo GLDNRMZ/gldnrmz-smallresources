@@ -1,75 +1,56 @@
--- Auto-walk command: makes your player wander like an AI ped
+-- /autowalk: your character wanders like an AI ped until you move or something interrupts it
 
-if not (Config and Config.features and Config.features.autowalk) then return end
+if not Utils.enabled('autowalk') then return end
 
-local function playerPed()
-    return PlayerPedId()
+-- Sprint, jump, attack, aim, W, S, A, D
+local CANCEL_CONTROLS = { 21, 22, 24, 25, 32, 33, 34, 35 }
+
+local active = false
+
+local function stop()
+    if not active then return end
+    active = false
+    ClearPedTasks(cache.ped)
 end
 
-local autowalk = false
+local function shouldCancel(ped)
+    if not IsPedOnFoot(ped) or IsPedSwimming(ped) or IsPedRagdoll(ped) or Utils.isIncapacitated(ped) then
+        return true
+    end
 
-local function stopAutowalk()
-    local ped = playerPed()
-    ClearPedTasks(ped)
-    autowalk = false
+    for i = 1, #CANCEL_CONTROLS do
+        if IsControlPressed(0, CANCEL_CONTROLS[i]) then return true end
+    end
+
+    return false
 end
 
-local function startAutowalk()
-    local ped = playerPed()
-    if ped == 0 or not IsPedOnFoot(ped) or IsEntityDead(ped) then return end
+local function start()
+    local ped = cache.ped
+    if not IsPedOnFoot(ped) or Utils.isIncapacitated(ped) then
+        return Utils.notify('You can\'t do that right now.', 'error')
+    end
 
-    autowalk = true
-    SetPedKeepTask(ped, true)
-    -- Standard wander task used by AI peds
+    active = true
     TaskWanderStandard(ped, 10.0, 10)
 
-    -- Monitor for conditions or user input to cancel
     CreateThread(function()
-        while autowalk do
-            ped = playerPed()
-            if ped == 0 then break end
-
-            -- Cancel if player state changes
-            if IsPedInAnyVehicle(ped) or IsPedSwimming(ped) or IsPedRagdoll(ped) or IsEntityDead(ped) then
-                stopAutowalk()
+        -- Give the player a moment to release the keys used to type the command
+        Wait(500)
+        while active do
+            if cache.ped ~= ped or shouldCancel(ped) then
+                stop()
                 break
             end
-
-            -- Cancel on player movement inputs or sprint
-            if IsControlJustPressed(0, 30)  -- move left
-                or IsControlJustPressed(0, 31) -- move down
-                or IsControlJustPressed(0, 32) -- move up
-                or IsControlJustPressed(0, 33) -- move right
-                or IsControlJustPressed(0, 34) -- strafe left
-                or IsControlJustPressed(0, 35) -- strafe right
-                or IsControlJustPressed(0, 21) -- sprint
-                or IsControlJustPressed(0, 22) -- jump
-            then
-                stopAutowalk()
-                break
-            end
-
-            Wait(100)
+            Wait(50)
         end
     end)
 end
 
-local cmdAutoWalkName = (Config and Config.commands and Config.commands.autoWalk and Config.commands.autoWalk.command) or 'autowalk'
-local cmdAutoWalkEnabled = not (Config and Config.commands and Config.commands.autoWalk and Config.commands.autoWalk.enabled == false)
+Utils.registerCommand('autoWalk', 'Toggle auto walk', function()
+    if active then stop() else start() end
+end)
 
-if cmdAutoWalkEnabled then
-RegisterCommand(cmdAutoWalkName, function()
-    if autowalk then
-        stopAutowalk()
-    else
-        startAutowalk()
-    end
-end, false)
-end
-
--- Clean up if resource stops while autowalking
-AddEventHandler('onResourceStop', function(res)
-    if res == GetCurrentResourceName() and autowalk then
-        stopAutowalk()
-    end
+AddEventHandler('onResourceStop', function(resource)
+    if resource == cache.resource then stop() end
 end)
