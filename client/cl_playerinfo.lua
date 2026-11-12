@@ -18,33 +18,39 @@ local function option(title, value, icon)
 end
 
 local function showInfo()
-    local pd = QBX.PlayerData
-    if not pd or not pd.citizenid then
+    local ok, citizenId = pcall(Framework.GetPlayerIdentifier)
+    if not ok or not citizenId then
         return Utils.notify('Your character isn\'t loaded yet.', 'error')
     end
 
-    local char, job, gang = pd.charinfo or {}, pd.job or {}, pd.gang or {}
-    local name = char.firstname and ('%s %s'):format(char.firstname, char.lastname or '') or nil
+    local _, first, last = pcall(Framework.GetPlayerName)
+    local name = first and ('%s %s'):format(first, last or '') or nil
 
+    local _, job = pcall(Framework.GetPlayerJobData)
+    job = type(job) == 'table' and job or {}
     local jobText = ('%s | %s | %s'):format(
-        job.label or job.name or 'Unemployed',
-        job.grade and job.grade.name or 'N/A',
-        job.onduty and 'On Duty' or 'Off Duty'
+        job.jobLabel or job.jobName or 'Unemployed',
+        job.gradeLabel or job.gradeName or 'N/A',
+        job.onDuty and 'On Duty' or 'Off Duty'
     )
-    local gangText = ('%s | %s'):format(
+
+    -- Gangs only exist on QBCore / Qbox
+    local _, pd = pcall(Framework.GetPlayerData)
+    local gang = type(pd) == 'table' and type(pd.gang) == 'table' and pd.gang or nil
+    local gangText = gang and ('%s | %s'):format(
         gang.label or gang.name or 'None',
         gang.grade and gang.grade.name or 'N/A'
-    )
+    ) or nil
 
     lib.registerContext({
         id = MENU_ID,
         title = 'Player Info',
         options = {
             option('Server ID', cache.serverId, 'hashtag'),
-            option('Citizen ID', pd.citizenid, 'id-card'),
+            option('Citizen ID', citizenId, 'id-card'),
             option('Name', name, 'user'),
             option('Job', jobText, 'briefcase'),
-            option('Gang', gangText, 'users'),
+            gangText and option('Gang', gangText, 'users') or nil,
         },
     })
     lib.showContext(MENU_ID)

@@ -2,6 +2,9 @@
 
 Utils = {}
 
+-- Framework access through community_bridge (Qbox, QBCore, ESX)
+Framework = exports.community_bridge:Framework()
+
 local RESOURCE = GetCurrentResourceName()
 
 ---@param feature string
@@ -31,8 +34,9 @@ function Utils.isIncapacitated(ped)
         return true
     end
 
-    local meta = QBX.PlayerData.metadata
-    return meta ~= nil and (meta.isdead or meta.inlaststand or meta.ishandcuffed) == true
+    local ok, dead = pcall(Framework.GetIsPlayerDead)
+    if ok and dead then return true end
+    return LocalPlayer.state.isCuffed == true or LocalPlayer.state.ishandcuffed == true
 end
 
 --- Loads an anim dict without throwing. Returns false on timeout.

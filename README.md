@@ -1,17 +1,17 @@
 # gldnrmz-smallresources
 
-A set of small gameplay tweaks for Qbox servers. Each feature has its own on/off switch in `config.lua`, and features that are switched off don't run any code.
+A set of small gameplay tweaks for Qbox, QBCore and ESX servers. Each feature has its own on/off switch in `config.lua`, and features that are switched off don't run any code.
 
 ## Requirements
 
-- [qbx_core](https://github.com/Qbox-project/qbx_core)
+- [community_bridge](https://github.com/TheOrderFivem/community_bridge) (with a supported framework)
 - [ox_lib](https://github.com/overextended/ox_lib)
 - [ox_inventory](https://github.com/overextended/ox_inventory) (only for `weaponDrop`)
 
 ## Installation
 
 1. Put the folder in your resources, e.g. `[scripts]/[gldnrmz]/gldnrmz-smallresources`.
-2. Make sure it starts after `ox_lib` and `qbx_core` (and `ox_inventory` if you use `weaponDrop`).
+2. Make sure it starts after `ox_lib` and `community_bridge` (and `ox_inventory` if you use `weaponDrop`).
 3. Edit `config.lua`, then restart the resource.
 
 ## Features

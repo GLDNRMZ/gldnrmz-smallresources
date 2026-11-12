@@ -1,6 +1,11 @@
--- Server half of the weapon drop feature (ox_inventory)
+-- Server half of the weapon drop feature (needs ox_inventory for world drops)
 
 if not Config.features.weaponDrop then return end
+
+if GetResourceState('ox_inventory') == 'missing' then
+    print('^3[gldnrmz-smallresources]^0 weaponDrop needs ox_inventory and has been disabled.')
+    return
+end
 
 local cfg = Config.weaponDrop
 local nextAllowed = {} ---@type table<number, number>

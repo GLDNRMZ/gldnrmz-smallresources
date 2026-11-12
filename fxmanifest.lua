@@ -14,7 +14,6 @@ shared_scripts {
 }
 
 client_scripts {
-    '@qbx_core/modules/playerdata.lua',
     'client/utils.lua',   -- must load before the feature files
     'client/cl_*.lua',
 }
@@ -25,5 +24,5 @@ server_scripts {
 
 dependencies {
     'ox_lib',
-    'qbx_core',
+    'community_bridge',
 }
