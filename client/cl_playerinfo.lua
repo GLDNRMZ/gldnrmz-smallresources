@@ -4,17 +4,30 @@ if not Utils.enabled('playerInfo') then return end
 
 local MENU_ID = 'gldnrmz_player_info'
 
-local function option(title, value, icon)
+--- `display` is what the menu shows; clicking always copies the full `value`.
+local function option(title, value, icon, display)
     value = (value ~= nil and value ~= '') and tostring(value) or 'N/A'
     return {
         title = title,
-        description = value,
+        description = display or value,
         icon = icon,
         onSelect = function()
             lib.setClipboard(value)
             Utils.notify(('%s copied to clipboard'):format(title), 'success')
         end,
     }
+end
+
+--- ESX has no short citizen ID: its identifier is `char1:` + the full license hash.
+--- Show it as "Identifier", shortened, and still copy the full value.
+local function idOption(id)
+    local okName, fw = pcall(Framework.GetResourceName)
+    if okName and fw == 'es_extended' then
+        id = tostring(id)
+        local short = #id > 24 and ('%s…%s'):format(id:sub(1, 12), id:sub(-7)) or id
+        return option('Identifier', id, 'id-card', short)
+    end
+    return option('Citizen ID', id, 'id-card')
 end
 
 local function showInfo()
@@ -47,7 +60,7 @@ local function showInfo()
         title = 'Player Info',
         options = {
             option('Server ID', cache.serverId, 'hashtag'),
-            option('Citizen ID', citizenId, 'id-card'),
+            idOption(citizenId),
             option('Name', name, 'user'),
             option('Job', jobText, 'briefcase'),
             gangText and option('Gang', gangText, 'users') or nil,
