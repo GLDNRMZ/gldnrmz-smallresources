@@ -18,16 +18,21 @@ local function option(title, value, icon, display)
     }
 end
 
---- ESX has no short citizen ID: its identifier is `char1:` + the full license hash.
---- Show it as "Identifier", shortened, and still copy the full value.
+--- QBCore / Qbox: the citizen ID is the player identifier.
+--- ESX: the citizen ID is the character's SSN (ESX 1.13.3+), which only the server can read.
+--- Older ESX without SSNs falls back to the long `char1:<license>` identifier, shown shortened.
 local function idOption(id)
     local okName, fw = pcall(Framework.GetResourceName)
-    if okName and fw == 'es_extended' then
-        id = tostring(id)
-        local short = #id > 24 and ('%s…%s'):format(id:sub(1, 12), id:sub(-7)) or id
-        return option('Identifier', id, 'id-card', short)
+    if not okName or fw ~= 'es_extended' then
+        return option('Citizen ID', id, 'id-card')
     end
-    return option('Citizen ID', id, 'id-card')
+
+    local ssn = lib.callback.await('gldnrmz-smallresources:server:getCitizenId', false)
+    if ssn then return option('Citizen ID', ssn, 'id-card') end
+
+    id = tostring(id)
+    local short = #id > 24 and ('%s…%s'):format(id:sub(1, 12), id:sub(-7)) or id
+    return option('Identifier', id, 'id-card', short)
 end
 
 local function showInfo()
