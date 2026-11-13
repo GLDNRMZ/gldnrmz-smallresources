@@ -6,7 +6,7 @@ use_experimental_fxv2_oal 'yes'
 name 'gldnrmz-smallresources'
 description 'Collection of small, toggleable gameplay tweaks'
 author 'gldnrmz'
-version '2.0.0'
+version '2.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
