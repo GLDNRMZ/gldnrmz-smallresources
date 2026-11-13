@@ -2,19 +2,19 @@
 
 A set of small gameplay tweaks for Qbox, QBCore and ESX servers. Each feature has its own on/off switch in `config.lua`, and features that are switched off don't run any code.
 
-## Requirements
+## 📦 Requirements
 
-- [community_bridge](https://github.com/TheOrderFivem/community_bridge) **0.13.6+** (Qbox, QBCore or ESX)
+- [community_bridge](https://github.com/TheOrderFivem/community_bridge) **0.13.6+** ([Qbox](https://github.com/Qbox-project/qbx_core), [QBCore](https://github.com/qbcore-framework/qb-core) or [ESX](https://github.com/esx-framework/esx_core))
 - [ox_lib](https://github.com/overextended/ox_lib)
 - [ox_inventory](https://github.com/overextended/ox_inventory) (only for `weaponDrop`)
 
-## Installation
+## ⚡ Installation
 
 1. Put the folder in your resources, e.g. `[gldnrmz]/gldnrmz-smallresources`.
 2. Make sure it starts after `ox_lib` and `community_bridge` (and `ox_inventory` if you use `weaponDrop`).
 3. Edit `config.lua`, then restart the resource.
 
-## Features
+## ✨ Features
 
 | Toggle | Default | What it does |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ Command names can be changed or disabled under `Config.commands`. Each feature's
 - **weaponDrop:** the server only accepts weapon items and has a cooldown (`Config.weaponDrop.cooldown`), so a modified client can't use the event to drop other items or spam drops.
 - **Armor:** this resource doesn't save armor; use your framework's (qbx_core does it built in).
 
-## Changelog
+## 🆕 Changelog
 
 ### 2.1.0
 - Runs on Qbox, QBCore and ESX through community_bridge (2.0.0 required Qbox).
@@ -65,3 +65,16 @@ Command names can be changed or disabled under `Config.commands`. Each feature's
 - `/propfix` reports how many props it removed. `/info` adds your name and copy-on-click.
 - Commands now show chat suggestions. Tunable values were moved into `config.lua`, and global functions were removed.
 - Version check handles HTTP errors and compares versions properly.
+
+<!-- gldnrmz-links -->
+---
+
+## 🔗 Links
+
+<p align="center">
+  <a href="https://discord.gg/7YHJ7774jA"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" /></a>
+  <a href="https://forum.cfx.re/u/gldnrmz/summary"><img src="https://img.shields.io/badge/Cfx.re-F40552?style=for-the-badge&logoColor=white" alt="Cfx.re forum" /></a>
+  <a href="https://5metrics.dev/resources?search=gldnrmz"><img src="https://img.shields.io/badge/5Metrics-00BFFF?style=for-the-badge&logoColor=white" alt="5Metrics" /></a>
+  <a href="https://gldnrmz.tebex.io"><img src="https://img.shields.io/badge/Tebex-FFD700?style=for-the-badge&logoColor=black" alt="Tebex store" /></a>
+  <a href="https://www.buymeacoffee.com/gldnrmz"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FF813F?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Buy me a coffee" /></a>
+</p>
