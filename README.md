@@ -4,13 +4,13 @@ A set of small gameplay tweaks for Qbox, QBCore and ESX servers. Each feature ha
 
 ## Requirements
 
-- [community_bridge](https://github.com/TheOrderFivem/community_bridge) (with a supported framework)
+- [community_bridge](https://github.com/TheOrderFivem/community_bridge) **0.13.6+** (Qbox, QBCore or ESX)
 - [ox_lib](https://github.com/overextended/ox_lib)
 - [ox_inventory](https://github.com/overextended/ox_inventory) (only for `weaponDrop`)
 
 ## Installation
 
-1. Put the folder in your resources, e.g. `[scripts]/[gldnrmz]/gldnrmz-smallresources`.
+1. Put the folder in your resources, e.g. `[gldnrmz]/gldnrmz-smallresources`.
 2. Make sure it starts after `ox_lib` and `community_bridge` (and `ox_inventory` if you use `weaponDrop`).
 3. Edit `config.lua`, then restart the resource.
 
@@ -18,7 +18,7 @@ A set of small gameplay tweaks for Qbox, QBCore and ESX servers. Each feature ha
 
 | Toggle | Default | What it does |
 | --- | --- | --- |
-| `playerInfo` | on | `/info` shows your server ID, citizen ID, name, job and gang. Click an entry to copy it. |
+| `playerInfo` | on | `/info` shows your server ID, citizen ID (the SSN on ESX), name, job and gang (QBCore / Qbox). Click an entry to copy it. |
 | `autowalk` | on | `/autowalk` makes you wander like an AI ped. Moving, sprinting, jumping, aiming or getting hurt cancels it. |
 | `vehicleCombat` | on | Lets players in the same vehicle shoot each other. |
 | `noHelmet` | on | Stops the automatic motorcycle helmet. `qbx_smallresources` has the same feature, so you only need one of them. |
@@ -41,9 +41,13 @@ Command names can be changed or disabled under `Config.commands`. Each feature's
 
 - **wStart and vehicle keys:** by default, W starts any engine the player is driving. To require keys, put your keys check in `Config.wStart.canStart`.
 - **weaponDrop:** the server only accepts weapon items and has a cooldown (`Config.weaponDrop.cooldown`), so a modified client can't use the event to drop other items or spam drops.
-- **Armor:** qbx_core already saves and restores armor, so this resource no longer does it.
+- **Armor:** this resource doesn't save armor; use your framework's (qbx_core does it built in).
 
 ## Changelog
+
+### 2.1.0
+- Runs on Qbox, QBCore and ESX through community_bridge (2.0.0 required Qbox).
+- `/info` shows the character's citizen ID on every framework (ESX: SSN).
 
 ### 2.0.0
 - Requires Qbox: player data now comes from qbx_core (removed the `qb-core` bridge and broken locale include).
