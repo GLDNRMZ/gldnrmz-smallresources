@@ -21,6 +21,7 @@ Config.features = {
     jumpSpam      = true,   -- Chance to ragdoll when jumping while running
     disablePunch  = true,  -- Blocks melee unless you are locked on to a target
     firstPerson   = true,   -- Forces first person while aiming (see Config.firstPerson)
+    headshots     = false,  -- Headshots aren't one-shot kills; set how many it takes (see Config.headshots)
 }
 
 Config.commands = {
@@ -70,6 +71,23 @@ Config.firstPerson = {
     vehicleAiming = true,    -- First person while aiming inside a vehicle
     bikeAiming = true,       -- First person while aiming on a bike or motorcycle
     disarmOnEnter = true,    -- Holsters your weapon if you enter a vehicle while aiming
+}
+
+Config.headshots = {
+    shotsToKill = 3,         -- Headshots to kill a player at full health
+    weaponOverrides = {      -- Per-weapon shotsToKill; 1 keeps a weapon as a true one-shot
+        -- [`WEAPON_PISTOL`]       = 4,
+        -- [`WEAPON_COMBATPISTOL`] = 4,
+        [`WEAPON_SNIPERRIFLE`]  = 1,
+        [`WEAPON_HEAVYSNIPER`]  = 1,
+    },
+    ignoreArmor = true,      -- true: headshots skip armor. false: armor soaks them first
+    deathHealth = 100,       -- Health at which a player counts as dead (100 on default player peds)
+    hitCooldown = 60,        -- ms; extra head hits from the same weapon in this window are ignored (shotgun pellets)
+    headBones = {            -- Bones that count as a headshot
+        [31086] = true,      -- SKEL_Head
+        [39317] = true,      -- SKEL_Neck_1
+    },
 }
 
 Config.weaponDrop = {

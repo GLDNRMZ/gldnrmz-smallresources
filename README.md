@@ -34,6 +34,7 @@ A set of small gameplay tweaks for Qbox, QBCore and ESX servers. Each feature ha
 | `jumpSpam` | on | 25% chance to ragdoll when jumping while running. |
 | `disablePunch` | off | Blocks melee unless you are locked on to a target. |
 | `firstPerson` | on | Forces first person while aiming in vehicles and on bikes (on-foot and always-on are optional). Your view switches back when you stop aiming. |
+| `headshots` | off | Headshots aren't instant kills. Each headshot deals a fixed share of health, so it always takes `shotsToKill` headshots (3 by default, set per weapon in `Config.headshots`) to kill a player at full health. |
 
 Command names can be changed or disabled under `Config.commands`. Each feature's settings (chances, timings, keys, models) are further down in `config.lua`.
 
